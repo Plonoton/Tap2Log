@@ -33,11 +33,27 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
   <script>
+    // Intercept Flutter's loader to prevent it from registering its own
+    // deprecated service worker, which would conflict with our sw.js.
+    window._flutter = window._flutter || {};
+    Object.defineProperty(window._flutter, 'loader', {
+      enumerable: true, configurable: true,
+      get() { return this._loaderValue; },
+      set(v) {
+        this._loaderValue = v;
+        if (v && v.load) {
+          const orig = v.load.bind(v);
+          v.load = ({ serviceWorkerSettings: _, ...rest } = {}) => orig(rest);
+        }
+      }
+    });
+
+    // Register our own service worker.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
     }
   </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
