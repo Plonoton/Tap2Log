@@ -50,7 +50,9 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Use URL string for cache matching (avoids Vary header mismatches).
+  // Strip query strings (e.g. ?cachebuster=...) so that requests like
+  // version.json?cachebuster=123 match the precached version.json entry.
+  url.search = '';
   const cacheKey = url.href;
 
   event.respondWith(
