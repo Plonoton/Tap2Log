@@ -3,8 +3,6 @@
 // Bump this when you redeploy to force a full cache refresh.
 const CACHE = 'tap2log-v1';
 
-// All files needed for the app to work offline.
-// Update this list if the build output changes significantly.
 const PRECACHE = [
   './',
   'flutter.js',
@@ -15,19 +13,16 @@ const PRECACHE = [
   'version.json',
   'sqlite3.wasm',
   'sqflite_sw.js',
-  // CanvasKit renderer (local, not CDN)
   'canvaskit/canvaskit.js',
   'canvaskit/canvaskit.wasm',
   'canvaskit/chromium/canvaskit.js',
   'canvaskit/chromium/canvaskit.wasm',
-  // Flutter assets
   'assets/AssetManifest.bin',
   'assets/AssetManifest.bin.json',
   'assets/FontManifest.json',
   'assets/fonts/MaterialIcons-Regular.otf',
   'assets/shaders/ink_sparkle.frag',
   'assets/shaders/stretch_effect.frag',
-  // Icons
   'icons/Icon-192.png',
   'icons/Icon-512.png',
   'icons/Icon-maskable-192.png',
@@ -55,33 +50,27 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Navigation: network-first, fall back to cached shell.
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(event.request, clone));
-          return res;
-        })
-        .catch(() => caches.match('./'))
-    );
-    return;
-  }
+  // Use URL string for cache matching (avoids Vary header mismatches).
+  const cacheKey = url.href;
 
-  // Assets: cache-first, silent background update.
   event.respondWith(
     caches.open(CACHE).then(cache =>
-      cache.match(event.request).then(cached => {
+      cache.match(cacheKey).then(cached => {
         const net = fetch(event.request).then(res => {
-          if (res.ok) cache.put(event.request, res.clone());
+          if (res.ok) cache.put(cacheKey, res.clone());
           return res;
         });
         if (cached) {
           net.catch(() => {});
           return cached;
         }
-        return net;
+        return net.catch(() => {
+          // Last resort for navigation: serve cached index.html.
+          if (event.request.mode === 'navigate') {
+            return cache.match(new URL('./', self.location).href);
+          }
+          throw new Error('offline');
+        });
       })
     )
   );
