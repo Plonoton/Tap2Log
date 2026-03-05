@@ -10,18 +10,12 @@ const PRECACHE = [
   'flutter.js',
   'flutter_bootstrap.js',
   'main.dart.js',
-  'main.dart.mjs',
-  'main.dart.wasm',
   'manifest.json',
   'favicon.png',
   'version.json',
   'sqlite3.wasm',
   'sqflite_sw.js',
-  // Renderers (browser picks one, but cache all for compatibility)
-  'canvaskit/skwasm.js',
-  'canvaskit/skwasm.wasm',
-  'canvaskit/skwasm_heavy.js',
-  'canvaskit/skwasm_heavy.wasm',
+  // CanvasKit renderer (local, not CDN)
   'canvaskit/canvaskit.js',
   'canvaskit/canvaskit.wasm',
   'canvaskit/chromium/canvaskit.js',
@@ -31,6 +25,8 @@ const PRECACHE = [
   'assets/AssetManifest.bin.json',
   'assets/FontManifest.json',
   'assets/fonts/MaterialIcons-Regular.otf',
+  'assets/shaders/ink_sparkle.frag',
+  'assets/shaders/stretch_effect.frag',
   // Icons
   'icons/Icon-192.png',
   'icons/Icon-512.png',

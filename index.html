@@ -44,7 +44,11 @@
         this._loaderValue = v;
         if (v && v.load) {
           const orig = v.load.bind(v);
-          v.load = ({ serviceWorkerSettings: _, ...rest } = {}) => orig(rest);
+          v.load = ({ serviceWorkerSettings: _, ...rest } = {}) => {
+            // Force local CanvasKit instead of CDN (needed for offline).
+            rest.config = { ...rest.config, canvasKitBaseUrl: 'canvaskit/' };
+            return orig(rest);
+          };
         }
       }
     });
