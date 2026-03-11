@@ -1,7 +1,6 @@
 'use strict';
 
-// Bump this when you redeploy to force a full cache refresh.
-const CACHE = 'tap2log-v1';
+const CACHE_PREFIX = 'tap2log-v';
 
 const PRECACHE = [
   './',
@@ -29,19 +28,45 @@ const PRECACHE = [
   'icons/Icon-maskable-512.png',
 ];
 
+// Derives the cache name from version.json, which Flutter generates at build
+// time - so the cache automatically rotates on every new deploy with no
+// manual version bump needed.
+// Result is memoised for the lifetime of this SW process.
+// Fallback (offline SW restart before version.json is in the HTTP cache):
+// reuse whichever tap2log-* cache already exists so offline mode keeps working.
+let _cacheName = null;
+async function getCacheName() {
+  if (_cacheName) return _cacheName;
+  try {
+    const res = await fetch('version.json');
+    const { version } = await res.json();
+    _cacheName = CACHE_PREFIX + version;
+  } catch (_) {
+    const keys = await caches.keys();
+    _cacheName = keys.find(k => k.startsWith(CACHE_PREFIX)) ?? CACHE_PREFIX + 'current';
+  }
+  return _cacheName;
+}
+
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
+    getCacheName().then(name =>
+      caches.open(name)
+        .then(c => c.addAll(PRECACHE))
+        .then(() => self.skipWaiting())
+    )
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+    getCacheName().then(name =>
+      caches.keys()
+        .then(keys => Promise.all(
+          keys.filter(k => k.startsWith(CACHE_PREFIX) && k !== name).map(k => caches.delete(k))
+        ))
+        .then(() => self.clients.claim())
+    )
   );
 });
 
@@ -56,24 +81,26 @@ self.addEventListener('fetch', event => {
   const cacheKey = url.href;
 
   event.respondWith(
-    caches.open(CACHE).then(cache =>
-      cache.match(cacheKey).then(cached => {
-        const net = fetch(event.request).then(res => {
-          if (res.ok) cache.put(cacheKey, res.clone());
-          return res;
-        });
-        if (cached) {
-          net.catch(() => {});
-          return cached;
-        }
-        return net.catch(() => {
-          // Last resort for navigation: serve cached index.html.
-          if (event.request.mode === 'navigate') {
-            return cache.match(new URL('./', self.location).href);
+    getCacheName().then(name =>
+      caches.open(name).then(cache =>
+        cache.match(cacheKey).then(cached => {
+          const net = fetch(event.request).then(res => {
+            if (res.ok) cache.put(cacheKey, res.clone());
+            return res;
+          });
+          if (cached) {
+            net.catch(() => {});
+            return cached;
           }
-          throw new Error('offline');
-        });
-      })
+          return net.catch(() => {
+            // Last resort for navigation: serve cached index.html.
+            if (event.request.mode === 'navigate') {
+              return cache.match(new URL('./', self.location).href);
+            }
+            throw new Error('offline');
+          });
+        })
+      )
     )
   );
 });

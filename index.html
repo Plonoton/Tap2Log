@@ -56,7 +56,14 @@
     });
 
     // Register our own service worker.
+    // When a new SW takes over an existing one (i.e. an app update was deployed),
+    // reload the page so the user immediately gets the new version.
+    // prevController is null on the very first install, so we skip the reload then.
     if ('serviceWorker' in navigator) {
+      const prevController = navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (prevController) window.location.reload();
+      });
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
     }
   </script>
