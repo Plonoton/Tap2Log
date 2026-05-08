@@ -23,6 +23,8 @@ const PRECACHE = [
   'assets/fonts/MaterialIcons-Regular.otf',
   'assets/shaders/ink_sparkle.frag',
   'assets/shaders/stretch_effect.frag',
+  'assets/assets/icons/tap2log_icon_256.png',
+  'assets/assets/icons/tap2log_icon_512.png',
   'icons/Icon-192.png',
   'icons/Icon-512.png',
   'icons/Icon-maskable-192.png',
